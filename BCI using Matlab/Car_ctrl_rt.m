@@ -1,0 +1,115 @@
+addpath(genpath('C:\Users\AmitVerma\OneDrive - Ulster University\Documents\UlsterUni\ISRC Hackathon\ISRC_build\ISRC_build\Hackathon_matlab\Hackathon\'));
+path = [cd ,'\mat_files\'];
+classifierFilename = ['Classifier_sub_0_ses_0.mat'];
+load([path classifierFilename]);
+COM = 'COM5';
+
+objs = instrfindall;
+% Close any that are open
+if ~isempty(objs)
+    fclose(objs);
+    % Delete them from MATLAB's memory
+    delete(objs);
+end
+% Clear variables
+clear objs
+% open port
+try
+    s = serial(COM);
+    set(s,'BaudRate',9600);
+    set(s,'DataBits',8);
+    set(s,'StopBits',1);
+    set(s,'Parity','non');
+    fopen(s);
+    disp('SP Connection established!!');
+    spOpen = true;
+catch
+    warning('Serial port not opened! Continuing without serial port')
+    spOpen = false;
+end
+
+if ~exist('lib', 'var')
+    % LSL_Name = 'Unicorn_LSLStream';
+    LSL_type = 'EEG';
+    % Defining the LSL library and buffer
+    disp('Loading the LSL library...');
+    lib = lsl_loadlib();
+    % resolve a stream...
+    disp('Resolving an M/EEG stream...');
+    result = {};
+    while isempty(result)
+        result = lsl_resolve_byprop(lib,'type',LSL_type);
+    end
+    % create a new inlet
+    disp('Opening an inlet...');
+    inlet = lsl_inlet(result{1});
+    disp('Inlet opened, checking connection...');
+    % Make sure a valid LSL stream has been established.
+    % LSL sometime takes time to established a streaming connection.
+    % It is a good practice to validate the connection by pulling some
+    % data out of the buffer before starting the experiment.
+    while true
+        [chunk, stamps] = inlet.pull_chunk();
+        if ~isempty(chunk)
+            break;
+        end
+    end
+
+    numChn = 8;
+    fs = 250;
+end
+
+Window_size = 1;
+data_allTrl = [];
+Fb_feat_vect = [];
+KbName('UnifyKeyNames');
+escapeKey = KbName('ESCAPE');
+disp('Classifier is running');
+tmp = [];
+indtrial = 0;
+while true
+    indtrial = indtrial + 1;
+    % wait to gather data:
+    [keyIsDown,~,keyCode] = KbCheck;
+    % ====== read data ======================
+
+    tmp = [tmp, inlet.pull_chunk()]; % temporary data chunk
+    if size(tmp,2) > Window_size*fs-1
+        data_rt = tmp(1:numChn,end-(Window_size*fs-1):end);
+        data_allTrl = horzcat(data_allTrl,data_rt);
+        MEG_SIG_Ts = data_rt(out,:);
+        tmp = [];
+        % then compute classifier output (BCI output):
+        Signal_out_Ts=flt_Bandpass(MEG_SIG_Ts', SP.order, SP.band, SP.Smp_Rate)';
+
+        % ========= Z-score Normalization =========
+        %Signal_out_Ts = zscore(Signal_out_Ts, 0, 2);
+
+        Z = f_spatFilt(Signal_out_Ts(:,:)', PTranspose, SP.No_of_Components);
+
+
+        X_feat = log(diag(Z*Z')/trace(Z*Z'));
+        Fb_feat_vect = [Fb_feat_vect X_feat];
+        BCI_output = predict(Tr_SVMModel,X_feat');
+        % save the BCI output
+        BCI_CA{indtrial,1}= BCI_output;
+        disp(BCI_output);
+        if BCI_output == 1
+            if spOpen
+                fwrite(s,1);
+            end
+            disp('Left Turn');
+        elseif BCI_output == 0
+            if spOpen
+                fwrite(s,2);
+            end
+            disp('Right Turn');
+        end
+        if keyCode(escapeKey)
+            break;
+        end
+    end
+end
+
+fclose(s);
+delete(s);

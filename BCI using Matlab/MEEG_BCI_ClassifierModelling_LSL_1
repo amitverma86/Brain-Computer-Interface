@@ -1,0 +1,41 @@
+%% Naming the classifier
+classifierFilename = ['Classifier_sub_0_ses_0.mat'];
+pathsave = [cd ,'\mat_files\'];
+SP.order = 4;   % Order of the filter
+SP.band = [8 30]; % Temporal Filtering Bands
+SP.Smp_Rate = fs; % Define Sampling Rate
+SP.No_of_Components = 2;
+%% Build the SVM classifier for wavelet transform features
+allData = [];
+
+X3D_ChSampTrl = data;
+
+allData = cat(2,allData,permute(X3D_ChSampTrl,[1,3,2]));
+Labels_T = Labels;
+
+y_shuff = Labels_T; 
+
+data_tr = permute(allData,[1,3,2]);
+numTrials = size(data_tr, 3);
+numChn = size(data_tr, 1);
+waveletFeatures = [];
+
+for ind_trial = 1:numTrials
+    trialData = squeeze(data_tr(:,:,ind_trial));
+    % Perform wavelet transform
+    [C, L] = wavedec(trialData, SP.order, 'db4'); % Using Daubechies wavelet
+    waveletFeatures(:, ind_trial) = C(1:SP.No_of_Components); % Extracting coefficients
+end
+
+out = 1:numChn;
+
+icode = Labels_T - 1;
+[Train_X, Train_Y, PTranspose] = fn_MEGBCI_train_CSP(waveletFeatures, icode, SP);
+
+disp('#######  Training The SVM Classifier ##########')
+Tr_SVMModel = fitcsvm(Train_X, Train_Y);
+disp('#######  Testing The SVM Classifier ##########')
+[Pred_Y] = predict(Tr_SVMModel, Train_X);
+Training_ACC = 100 * mean(Pred_Y == Train_Y);
+
+save([pathsave classifierFilename], 'out', 'Train_X', 'Train_Y', 'Tr_SVMModel', 'PTranspose', 'SP');
