@@ -17,9 +17,9 @@ This repository contains a section of personal explorations into brain signal pr
 Python, MATLAB, MNE, NumPy, SciPy, scikit-learn, FFT, CSP
 
 ## 📄 Notes
-Data used: EEG datasets collected using cap provided by Neuralink
-Due to sensitivity, raw EEG files may not be included
-We leverage Zinbi, a middleware platform, to seamlessly interface the BCI system with the game environment during Hackathon.
+- Data used: Bipolar EEG datasets - collected using cap and other equipment provided by Neuralink.
+- Due to sensitivity, raw EEG files may not be included  but examples are given.
+- We leverage Zinbi, a middleware platform, to seamlessly interface the BCI system with the game environment during Hackathon.
 
 ## 📫 Contact
 Email or message if you’d like to know more about the application of ML in neuro-tech.
