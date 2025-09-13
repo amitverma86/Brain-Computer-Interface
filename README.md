@@ -1,6 +1,6 @@
 # Brain-Computer Interface (BCI) Projects
 
-This repository contains coursework and personal explorations into brain signal processing and Brain-Computer Interface technologies. It includes signal acquisition, preprocessing, feature extraction, and classification using machine learning.
+This repository contains a section of personal explorations into brain signal processing and Brain-Computer Interface technologies. It includes signal acquisition, preprocessing, feature extraction, and classification using machine learning. The task, given to us at a Hackathon event, was to enhance the code and use the interface to compete in a racing game.
 
 ## 🧪 Projects
 
